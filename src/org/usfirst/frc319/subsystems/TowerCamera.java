@@ -117,7 +117,7 @@ public class TowerCamera extends Subsystem {
 		this.readDashboard();
 		
 		if(BLU_TEAM == RED_TEAM){
-			//THIS IS AN INCOMPATIBLE STATE, SOME ACTION SHOULD BE TAKEN
+			//MWT: THIS IS AN INCOMPATIBLE STATE, SOME ACTION SHOULD BE TAKEN
 		}else if(BLU_TEAM){
 			//Threshold the image looking for blue target
 			NIVision.imaqColorThreshold(binaryFrame, frame, 255, NIVision.ColorMode.RGB, BLU_TARGET_R_RANGE, BLU_TARGET_G_RANGE, BLU_TARGET_B_RANGE);
@@ -125,7 +125,7 @@ public class TowerCamera extends Subsystem {
 			//Threshold the image looking for red target
 			NIVision.imaqColorThreshold(binaryFrame, frame, 255, NIVision.ColorMode.RGB, RED_TARGET_R_RANGE, RED_TARGET_G_RANGE, RED_TARGET_B_RANGE);
 		}else{
-			//THIS IS AN INCOMPATIBLE STATE, SOME ACTION SHOULD BE TAKEN
+			//MWT: THIS IS AN INCOMPATIBLE STATE, SOME ACTION SHOULD BE TAKEN
 		}
 		
 
@@ -138,8 +138,7 @@ public class TowerCamera extends Subsystem {
 
 		//filter out small particles 
 		//MWT: IN 2014 WE USED A WIDTH FILTER INSTEAD OF AREA
-		float areaMin = (float)SmartDashboard.getNumber("Area min %", AREA_MINIMUM);
-		criteria[0].lower = areaMin;
+		criteria[0].lower = (float)(AREA_MINIMUM);
 		imaqError = NIVision.imaqParticleFilter4(binaryFrame, binaryFrame, criteria, filterOptions, null);
 
 		//Send particle count after filtering to dashboard
