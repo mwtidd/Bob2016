@@ -55,6 +55,7 @@ public class TowerCamera extends Subsystem {
 	private boolean RED_TEAM = false;
 	private boolean BLU_TEAM = false;
 	
+	int MAX_PARTICLES = 5; //The maximum number of particles to iterate over
 	double AREA_MINIMUM = 0.5; //Default Area minimum for particle as a percentage of total image area
 	double SCORE_MIN = 75.0;  //Minimum score to be considered a target
 	NIVision.ParticleFilterCriteria2 criteria[] = new NIVision.ParticleFilterCriteria2[1];
@@ -152,7 +153,7 @@ public class TowerCamera extends Subsystem {
 			//Measure particles and sort by particle size
 			Vector<ParticleReport> particles = new Vector<ParticleReport>();
 			//MWT: IN 2014 WE USED A MAX PARTICLE COUNT TO AVOID BOGGING DOWN THE CPU
-			for(int particleIndex = 0; particleIndex < numParticles; particleIndex++){
+			for(int particleIndex = 0;  particleIndex < MAX_PARTICLES && particleIndex < numParticles; particleIndex++){
 				//MWT: IN 2014 WE USED AN ASPECT RATIO FILTER HERE
 				ParticleReport par = new ParticleReport();
 				par.PercentAreaToImageArea = NIVision.imaqMeasureParticle(binaryFrame, particleIndex, 0, NIVision.MeasurementType.MT_AREA_BY_IMAGE_AREA);
@@ -255,7 +256,7 @@ public class TowerCamera extends Subsystem {
   		SmartDashboard.putBoolean("RED TEAM", RED_TEAM);
   		SmartDashboard.putBoolean("BLUE TEAM", BLU_TEAM);
   		
-  		SmartDashboard.putNumber("Area min %", AREA_MINIMUM);
+  		SmartDashboard.putNumber("AREA MIN %", AREA_MINIMUM);
   	}
   	
   	private void readDashboard(){
@@ -273,6 +274,11 @@ public class TowerCamera extends Subsystem {
   		BLU_TARGET_G_RANGE.maxValue = (int)SmartDashboard.getNumber("BLUE TARGET (G max)", BLU_TARGET_G_RANGE.maxValue);
   		BLU_TARGET_B_RANGE.minValue = (int)SmartDashboard.getNumber("BLUE TARGET (B min)", BLU_TARGET_B_RANGE.minValue);
   		BLU_TARGET_B_RANGE.maxValue = (int)SmartDashboard.getNumber("BLUE TARGET (B max)", BLU_TARGET_B_RANGE.maxValue);
+  	
+  		RED_TEAM = SmartDashboard.getBoolean("RED TEAM", RED_TEAM);
+  		BLU_TEAM = SmartDashboard.getBoolean("BLUE TEAM", BLU_TEAM);
+  		
+  		AREA_MINIMUM = SmartDashboard.getNumber("AREA MIN %", AREA_MINIMUM);
   	}
     
   	//A structure to hold measurements of a particle
