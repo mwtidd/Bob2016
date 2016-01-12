@@ -31,16 +31,27 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
  *
  */
 public class TowerCamera extends Subsystem {
+	
+	private boolean running = false;
 
 	//Images
+	int session;
 	Image frame;
 	Image binaryFrame;
 	int imaqError;
 	
 	//Constants
-	NIVision.Range TOTE_HUE_RANGE = new NIVision.Range(101, 64);	//Default hue range for yellow tote
-	NIVision.Range TOTE_SAT_RANGE = new NIVision.Range(88, 255);	//Default saturation range for yellow tote
-	NIVision.Range TOTE_VAL_RANGE = new NIVision.Range(134, 255);	//Default value range for yellow tote
+	private NIVision.Range RED_TARGET_R_RANGE = new NIVision.Range(100, 255);	//Default red range for the red target
+	private NIVision.Range RED_TARGET_G_RANGE = new NIVision.Range(0, 255);	//Default green range for the red target
+	private NIVision.Range RED_TARGET_B_RANGE = new NIVision.Range(0, 155);	//Default blue range for the red target
+	
+	private NIVision.Range BLU_TARGET_R_RANGE = new NIVision.Range(0, 155);	//Default red range for the blue target
+	private NIVision.Range BLU_TARGET_G_RANGE = new NIVision.Range(0, 255);	//Default green range for the blue target
+	private NIVision.Range BLU_TARGET_B_RANGE = new NIVision.Range(100, 255);	//Default blue range for the blue target
+	
+	private boolean RED_TEAM = false;
+	private boolean BLU_TEAM = false;
+	
 	double AREA_MINIMUM = 0.5; //Default Area minimum for particle as a percentage of total image area
 	double LONG_RATIO = 2.22; //Tote long side = 26.9 / Tote height = 12.1 = 2.22
 	double SHORT_RATIO = 1.4; //Tote short side = 16.9 / Tote height = 12.1 = 1.4
@@ -79,18 +90,43 @@ public class TowerCamera extends Subsystem {
 		binaryFrame = NIVision.imaqCreateImage(ImageType.IMAGE_U8, 0);
 		criteria[0] = new NIVision.ParticleFilterCriteria2(NIVision.MeasurementType.MT_AREA_BY_IMAGE_AREA, AREA_MINIMUM, 100.0, 0, 0);
 
+		// the camera name (ex "cam0") can be found through the roborio web interface
+        session = NIVision.IMAQdxOpenCamera("cam0",
+                NIVision.IMAQdxCameraControlMode.CameraControlModeController);
+		
 		this.initializeDashboard();
     }
     
     public void run(){
+    	
+    	if(!running){
+    		//if we are not currently running, start the camera
+    		NIVision.IMAQdxStartAcquisition(session);
+    	}
+    	
+    	/**
     	//read file in from disk. For this example to run you need to copy image.jpg from the SampleImages folder to the
 		//directory shown below using FTP or SFTP: http://wpilib.screenstepslive.com/s/4485/m/24166/l/282299-roborio-ftp
 		NIVision.imaqReadFile(frame, "/home/lvuser/SampleImages/image.jpg");
+		**/
+		
+		//grab the latest image
+		NIVision.IMAQdxGrab(session, frame, 1);
 
 		this.readDashboard();
 		
-		//Threshold the image looking for yellow (tote color)
-		NIVision.imaqColorThreshold(binaryFrame, frame, 255, NIVision.ColorMode.HSV, TOTE_HUE_RANGE, TOTE_SAT_RANGE, TOTE_VAL_RANGE);
+		if(BLU_TEAM == RED_TEAM){
+			//THIS IS AN INCOMPATIBLE STATE, SOME ACTION SHOULD BE TAKEN
+		}else if(BLU_TEAM){
+			//Threshold the image looking for blue target
+			NIVision.imaqColorThreshold(binaryFrame, frame, 255, NIVision.ColorMode.RGB, BLU_TARGET_R_RANGE, BLU_TARGET_G_RANGE, BLU_TARGET_B_RANGE);
+		}else if(RED_TEAM){
+			//Threshold the image looking for red target
+			NIVision.imaqColorThreshold(binaryFrame, frame, 255, NIVision.ColorMode.RGB, RED_TARGET_R_RANGE, RED_TARGET_G_RANGE, RED_TARGET_B_RANGE);
+		}else{
+			//THIS IS AN INCOMPATIBLE STATE, SOME ACTION SHOULD BE TAKEN
+		}
+		
 
 		//Send particle count to dashboard
 		int numParticles = NIVision.imaqCountParticles(binaryFrame, 1);
@@ -99,7 +135,8 @@ public class TowerCamera extends Subsystem {
 		//Send masked image to dashboard to assist in tweaking mask.
 		CameraServer.getInstance().setImage(binaryFrame);
 
-		//filter out small particles
+		//filter out small particles 
+		//MWT: IN 2014 WE USED A WIDTH FILTER INSTEAD OF AREA
 		float areaMin = (float)SmartDashboard.getNumber("Area min %", AREA_MINIMUM);
 		criteria[0].lower = areaMin;
 		imaqError = NIVision.imaqParticleFilter4(binaryFrame, binaryFrame, criteria, filterOptions, null);
@@ -112,8 +149,10 @@ public class TowerCamera extends Subsystem {
 		{
 			//Measure particles and sort by particle size
 			Vector<ParticleReport> particles = new Vector<ParticleReport>();
+			//MWT: IN 2014 WE USED A MAX PARTICLE COUNT TO AVOID BOGGING DOWN THE CPU
 			for(int particleIndex = 0; particleIndex < numParticles; particleIndex++)
 			{
+				//MWT: IN 2014 WE USED AN ASPECT RATIO FILTER HERE
 				ParticleReport par = new ParticleReport();
 				par.PercentAreaToImageArea = NIVision.imaqMeasureParticle(binaryFrame, particleIndex, 0, NIVision.MeasurementType.MT_AREA_BY_IMAGE_AREA);
 				par.Area = NIVision.imaqMeasureParticle(binaryFrame, particleIndex, 0, NIVision.MeasurementType.MT_AREA);
@@ -125,6 +164,8 @@ public class TowerCamera extends Subsystem {
 			}
 			particles.sort(null);
 
+			//MWT: IN 2014 WE EXPLICITLY DIDN'T USE THE SCORES MECHANISM
+			
 			//This example only scores the largest particle. Extending to score all particles and choosing the desired one is left as an exercise
 			//for the reader. Note that this scores and reports information about a single particle (single L shaped target). To get accurate information 
 			//about the location of the tote (not just the distance) you will need to correlate two adjacent targets in order to find the true center of the tote.
@@ -195,24 +236,41 @@ public class TowerCamera extends Subsystem {
   	
   	private void initializeDashboard(){
   		//Put default values to SmartDashboard so fields will appear
-  		SmartDashboard.putNumber("Tote hue min", TOTE_HUE_RANGE.minValue);
-  		SmartDashboard.putNumber("Tote hue max", TOTE_HUE_RANGE.maxValue);
-  		SmartDashboard.putNumber("Tote sat min", TOTE_SAT_RANGE.minValue);
-  		SmartDashboard.putNumber("Tote sat max", TOTE_SAT_RANGE.maxValue);
-  		SmartDashboard.putNumber("Tote val min", TOTE_VAL_RANGE.minValue);
-  		SmartDashboard.putNumber("Tote val max", TOTE_VAL_RANGE.maxValue);
+  		SmartDashboard.putNumber("RED TARGET (R min)", RED_TARGET_R_RANGE.minValue);
+  		SmartDashboard.putNumber("RED TARGET (R max)", RED_TARGET_R_RANGE.maxValue);
+  		SmartDashboard.putNumber("RED TARGET (G min)", RED_TARGET_G_RANGE.minValue);
+  		SmartDashboard.putNumber("RED TARGET (G max)", RED_TARGET_G_RANGE.maxValue);
+  		SmartDashboard.putNumber("RED TARGET (B min)", RED_TARGET_B_RANGE.minValue);
+  		SmartDashboard.putNumber("RED TARGET (B max)", RED_TARGET_B_RANGE.maxValue);
+  		
+  		SmartDashboard.putNumber("BLUE TARGET (R min)", BLU_TARGET_R_RANGE.minValue);
+  		SmartDashboard.putNumber("BLUE TARGET (R max)", BLU_TARGET_R_RANGE.maxValue);
+  		SmartDashboard.putNumber("BLUE TARGET (G min)", BLU_TARGET_G_RANGE.minValue);
+  		SmartDashboard.putNumber("BLUE TARGET (G max)", BLU_TARGET_G_RANGE.maxValue);
+  		SmartDashboard.putNumber("BLUE TARGET (B min)", BLU_TARGET_B_RANGE.minValue);
+  		SmartDashboard.putNumber("BLUE TARGET (B max)", BLU_TARGET_B_RANGE.maxValue);
+  		
+  		SmartDashboard.putBoolean("RED TEAM", RED_TEAM);
+  		SmartDashboard.putBoolean("BLUE TEAM", BLU_TEAM);
+  		
   		SmartDashboard.putNumber("Area min %", AREA_MINIMUM);
   	}
   	
   	private void readDashboard(){
   		//Update threshold values from SmartDashboard. For performance reasons it is recommended to remove this after calibration is finished.
-  		TOTE_HUE_RANGE.minValue = (int)SmartDashboard.getNumber("Tote hue min", TOTE_HUE_RANGE.minValue);
-  		TOTE_HUE_RANGE.maxValue = (int)SmartDashboard.getNumber("Tote hue max", TOTE_HUE_RANGE.maxValue);
-  		TOTE_SAT_RANGE.minValue = (int)SmartDashboard.getNumber("Tote sat min", TOTE_SAT_RANGE.minValue);
-  		TOTE_SAT_RANGE.maxValue = (int)SmartDashboard.getNumber("Tote sat max", TOTE_SAT_RANGE.maxValue);
-  		TOTE_VAL_RANGE.minValue = (int)SmartDashboard.getNumber("Tote val min", TOTE_VAL_RANGE.minValue);
-  		TOTE_VAL_RANGE.maxValue = (int)SmartDashboard.getNumber("Tote val max", TOTE_VAL_RANGE.maxValue);
-
+  		RED_TARGET_R_RANGE.minValue = (int)SmartDashboard.getNumber("RED TARGET (R min)", RED_TARGET_R_RANGE.minValue);
+  		RED_TARGET_R_RANGE.maxValue = (int)SmartDashboard.getNumber("RED TARGET (R max)", RED_TARGET_R_RANGE.maxValue);
+  		RED_TARGET_G_RANGE.minValue = (int)SmartDashboard.getNumber("RED TARGET (G min)", RED_TARGET_G_RANGE.minValue);
+  		RED_TARGET_G_RANGE.maxValue = (int)SmartDashboard.getNumber("RED TARGET (G max)", RED_TARGET_G_RANGE.maxValue);
+  		RED_TARGET_B_RANGE.minValue = (int)SmartDashboard.getNumber("RED TARGET (B min)", RED_TARGET_B_RANGE.minValue);
+  		RED_TARGET_B_RANGE.maxValue = (int)SmartDashboard.getNumber("RED TARGET (B max)", RED_TARGET_B_RANGE.maxValue);
+  		
+  		BLU_TARGET_R_RANGE.minValue = (int)SmartDashboard.getNumber("BLUE TARGET (R min)", BLU_TARGET_R_RANGE.minValue);
+  		BLU_TARGET_R_RANGE.maxValue = (int)SmartDashboard.getNumber("BLUE TARGET (R max)", BLU_TARGET_R_RANGE.maxValue);
+  		BLU_TARGET_G_RANGE.minValue = (int)SmartDashboard.getNumber("BLUE TARGET (G min)", BLU_TARGET_G_RANGE.minValue);
+  		BLU_TARGET_G_RANGE.maxValue = (int)SmartDashboard.getNumber("BLUE TARGET (G max)", BLU_TARGET_G_RANGE.maxValue);
+  		BLU_TARGET_B_RANGE.minValue = (int)SmartDashboard.getNumber("BLUE TARGET (B min)", BLU_TARGET_B_RANGE.minValue);
+  		BLU_TARGET_B_RANGE.maxValue = (int)SmartDashboard.getNumber("BLUE TARGET (B max)", BLU_TARGET_B_RANGE.maxValue);
   	}
     
   //A structure to hold measurements of a particle
