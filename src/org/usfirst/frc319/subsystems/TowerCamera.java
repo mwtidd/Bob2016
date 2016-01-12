@@ -45,18 +45,18 @@ public class TowerCamera extends Subsystem {
 	
 	//Flexible Constants
 	private NIVision.Range RED_TARGET_R_RANGE = new NIVision.Range(100, 255);	//Default red range for the red target
-	private NIVision.Range RED_TARGET_G_RANGE = new NIVision.Range(0, 255);	//Default green range for the red target
-	private NIVision.Range RED_TARGET_B_RANGE = new NIVision.Range(0, 155);	//Default blue range for the red target
+	private NIVision.Range RED_TARGET_G_RANGE = new NIVision.Range(0, 255);		//Default green range for the red target
+	private NIVision.Range RED_TARGET_B_RANGE = new NIVision.Range(0, 155);		//Default blue range for the red target
 	
-	private NIVision.Range BLU_TARGET_R_RANGE = new NIVision.Range(0, 155);	//Default red range for the blue target
-	private NIVision.Range BLU_TARGET_G_RANGE = new NIVision.Range(0, 255);	//Default green range for the blue target
+	private NIVision.Range BLU_TARGET_R_RANGE = new NIVision.Range(0, 155);		//Default red range for the blue target
+	private NIVision.Range BLU_TARGET_G_RANGE = new NIVision.Range(0, 255);		//Default green range for the blue target
 	private NIVision.Range BLU_TARGET_B_RANGE = new NIVision.Range(100, 255);	//Default blue range for the blue target
 	
 	private boolean RED_TEAM = false;
 	private boolean BLU_TEAM = false;
 	
 	double AREA_MINIMUM = 0.5; //Default Area minimum for particle as a percentage of total image area
-	double SCORE_MIN = 75.0;  //Minimum score to be considered a tote
+	double SCORE_MIN = 75.0;  //Minimum score to be considered a target
 	NIVision.ParticleFilterCriteria2 criteria[] = new NIVision.ParticleFilterCriteria2[1];
 	NIVision.ParticleFilterOptions2 filterOptions = new NIVision.ParticleFilterOptions2(0,0,1,1);
 	Scores scores = new Scores();
@@ -168,8 +168,8 @@ public class TowerCamera extends Subsystem {
 			//MWT: IN 2014 WE EXPLICITLY DIDN'T USE THE SCORES MECHANISM
 			
 			//This example only scores the largest particle. Extending to score all particles and choosing the desired one is left as an exercise
-			//for the reader. Note that this scores and reports information about a single particle (single L shaped target). To get accurate information 
-			//about the location of the tote (not just the distance) you will need to correlate two adjacent targets in order to find the true center of the tote.
+			//for the reader. Note that this scores and reports information about a single particle (single U shaped target). To get accurate information 
+			//you will need to evaluate the target against 1 or 2 other targets.
 			scores.Aspect = getApspectScore(particles.elementAt(0));
 			SmartDashboard.putNumber("Aspect", scores.Aspect);
 			scores.Area = getAreaScore(particles.elementAt(0));
@@ -180,7 +180,7 @@ public class TowerCamera extends Subsystem {
 		}
 		
 		//MWT: IDEALLY WE WOULD PUT A GREEN AROUND THE IMAGE WHEN THE TARGET IS FOUND AND RED WHEN IT IS NOT
-		//Send distance and tote status to dashboard. The bounding rect, particularly the horizontal center (left - right) may be useful for rotating/driving towards a tote
+		//Send distance and target status to dashboard. The bounding rect, particularly the horizontal center (left - right) may be useful for rotating/driving towards a target
 		SmartDashboard.putBoolean("Found Target", foundTarget);
 		SmartDashboard.putNumber("Distance", distance);
     }
@@ -223,7 +223,6 @@ public class TowerCamera extends Subsystem {
   	 *
   	 * @param image The image to use for measuring the particle estimated rectangle
   	 * @param report The Particle Analysis Report for the particle
-  	 * @param isLong Boolean indicating if the target is believed to be the long side of a tote
   	 * @return The estimated distance to the target in feet.
   	 */
   	double computeDistance (Image image, ParticleReport report) {
