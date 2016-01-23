@@ -44,16 +44,21 @@ public class TowerCamera extends Subsystem {
 	private static double VIEW_ANGLE = 49.4; //View angle fo camera, set to Axis m1011 by default, 64 for m1013, 51.7 for 206, 52 for HD3000 square, 60 for HD3000 640x480
 	
 	//Flexible Constants
-	private NIVision.Range RED_TARGET_R_RANGE = new NIVision.Range(100, 255);	//Default red range for the red target
-	private NIVision.Range RED_TARGET_G_RANGE = new NIVision.Range(0, 255);		//Default green range for the red target
-	private NIVision.Range RED_TARGET_B_RANGE = new NIVision.Range(0, 155);		//Default blue range for the red target
+	private NIVision.Range GREEN_TARGET_R_RANGE = new NIVision.Range(0, 155);	//Default red range for the red target
+	private NIVision.Range GREEN_TARGET_G_RANGE = new NIVision.Range(100, 255);		//Default green range for the red target
+	private NIVision.Range GREEN_TARGET_B_RANGE = new NIVision.Range(0, 155);		//Default blue range for the red target
+		
 	
-	private NIVision.Range BLU_TARGET_R_RANGE = new NIVision.Range(0, 155);		//Default red range for the blue target
-	private NIVision.Range BLU_TARGET_G_RANGE = new NIVision.Range(0, 255);		//Default green range for the blue target
-	private NIVision.Range BLU_TARGET_B_RANGE = new NIVision.Range(100, 255);	//Default blue range for the blue target
+	//private NIVision.Range RED_TARGET_R_RANGE = new NIVision.Range(100, 255);	//Default red range for the red target
+	//private NIVision.Range RED_TARGET_G_RANGE = new NIVision.Range(0, 255);		//Default green range for the red target
+	//private NIVision.Range RED_TARGET_B_RANGE = new NIVision.Range(0, 155);		//Default blue range for the red target
 	
-	private boolean RED_TEAM = false;
-	private boolean BLU_TEAM = false;
+	//private NIVision.Range BLU_TARGET_R_RANGE = new NIVision.Range(0, 155);		//Default red range for the blue target
+	//private NIVision.Range BLU_TARGET_G_RANGE = new NIVision.Range(0, 255);		//Default green range for the blue target
+	//private NIVision.Range BLU_TARGET_B_RANGE = new NIVision.Range(100, 255);	//Default blue range for the blue target
+	
+	//private boolean RED_TEAM = false;
+	//private boolean BLU_TEAM = false;
 	
 	int MAX_PARTICLES = 5; //The maximum number of particles to iterate over
 	double AREA_MINIMUM = 0.5; //Default Area minimum for particle as a percentage of total image area
@@ -85,6 +90,7 @@ public class TowerCamera extends Subsystem {
         // setDefaultCommand(new MySpecialCommand());
     }
     
+    //PLEASE COMMENT
     public void initialize(){
     	// create images
 		frame = NIVision.imaqCreateImage(ImageType.IMAGE_RGB, 0);
@@ -116,6 +122,7 @@ public class TowerCamera extends Subsystem {
 
 		this.readDashboard();
 		
+		/**
 		if(BLU_TEAM == RED_TEAM){
 			//MWT: THIS IS AN INCOMPATIBLE STATE, SOME ACTION SHOULD BE TAKEN
 		}else if(BLU_TEAM){
@@ -127,7 +134,9 @@ public class TowerCamera extends Subsystem {
 		}else{
 			//MWT: THIS IS AN INCOMPATIBLE STATE, SOME ACTION SHOULD BE TAKEN
 		}
-		
+		**/
+		//APPLY FILTER 2 (COLOR)
+		NIVision.imaqColorThreshold(binaryFrame, frame, 255, NIVision.ColorMode.RGB, GREEN_TARGET_R_RANGE, GREEN_TARGET_G_RANGE, GREEN_TARGET_B_RANGE);
 
 		//Send particle count to dashboard
 		int numParticles = NIVision.imaqCountParticles(binaryFrame, 1);
@@ -147,6 +156,10 @@ public class TowerCamera extends Subsystem {
 		
 		boolean foundTarget = false;
 		double distance = 0d;
+		
+		double minLeft = Double.MAX_VALUE;
+		
+		ParticleReport leftMostTarget;
 
 		if(numParticles > 0){
 			//Measure particles and sort by particle size
@@ -162,10 +175,18 @@ public class TowerCamera extends Subsystem {
 				par.BoundingRectBottom = NIVision.imaqMeasureParticle(binaryFrame, particleIndex, 0, NIVision.MeasurementType.MT_BOUNDING_RECT_BOTTOM);
 				par.BoundingRectRight = NIVision.imaqMeasureParticle(binaryFrame, particleIndex, 0, NIVision.MeasurementType.MT_BOUNDING_RECT_RIGHT);
 				particles.add(par);
+				
+				if(par.BoundingRectLeft < minLeft){
+					leftMostTarget = par;
+					foundTarget = true;
+				}
+				
 			}
-			particles.sort(null);
+			//particles.sort(null);
 
 			//MWT: IN 2014 WE EXPLICITLY DIDN'T USE THE SCORES MECHANISM
+			
+			/**
 			
 			//This example only scores the largest particle. Extending to score all particles and choosing the desired one is left as an exercise
 			//for the reader. Note that this scores and reports information about a single particle (single U shaped target). To get accurate information 
@@ -177,6 +198,9 @@ public class TowerCamera extends Subsystem {
 			
 			foundTarget= scores.Aspect > SCORE_MIN && scores.Area > SCORE_MIN;
 			distance = computeDistance(binaryFrame, particles.elementAt(0));
+			
+			**/
+			
 		}
 		
 		//MWT: IDEALLY WE WOULD PUT A GREEN AROUND THE IMAGE WHEN THE TARGET IS FOUND AND RED WHEN IT IS NOT
@@ -238,6 +262,14 @@ public class TowerCamera extends Subsystem {
   	
   	private void initializeDashboard(){
   		//Put default values to SmartDashboard so fields will appear
+  		SmartDashboard.putNumber("GREEN TARGET (R min)", GREEN_TARGET_R_RANGE.minValue);
+  		SmartDashboard.putNumber("GREEN TARGET (R max)", GREEN_TARGET_R_RANGE.maxValue);
+  		SmartDashboard.putNumber("GREEN TARGET (G min)", GREEN_TARGET_G_RANGE.minValue);
+  		SmartDashboard.putNumber("GREEN TARGET (G max)", GREEN_TARGET_G_RANGE.maxValue);
+  		SmartDashboard.putNumber("GREEN TARGET (B min)", GREEN_TARGET_B_RANGE.minValue);
+  		SmartDashboard.putNumber("GREEN TARGET (B max)", GREEN_TARGET_B_RANGE.maxValue);
+  		
+  		/**
   		SmartDashboard.putNumber("RED TARGET (R min)", RED_TARGET_R_RANGE.minValue);
   		SmartDashboard.putNumber("RED TARGET (R max)", RED_TARGET_R_RANGE.maxValue);
   		SmartDashboard.putNumber("RED TARGET (G min)", RED_TARGET_G_RANGE.minValue);
@@ -251,15 +283,25 @@ public class TowerCamera extends Subsystem {
   		SmartDashboard.putNumber("BLUE TARGET (G max)", BLU_TARGET_G_RANGE.maxValue);
   		SmartDashboard.putNumber("BLUE TARGET (B min)", BLU_TARGET_B_RANGE.minValue);
   		SmartDashboard.putNumber("BLUE TARGET (B max)", BLU_TARGET_B_RANGE.maxValue);
+  		**/
   		
-  		SmartDashboard.putBoolean("RED TEAM", RED_TEAM);
-  		SmartDashboard.putBoolean("BLUE TEAM", BLU_TEAM);
+  		//SmartDashboard.putBoolean("RED TEAM", RED_TEAM);
+  		//SmartDashboard.putBoolean("BLUE TEAM", BLU_TEAM);
   		
   		SmartDashboard.putNumber("AREA MIN %", AREA_MINIMUM);
   	}
   	
   	private void readDashboard(){
   		//Update threshold values from SmartDashboard. For performance reasons it is recommended to remove this after calibration is finished.
+  		GREEN_TARGET_R_RANGE.minValue = (int)SmartDashboard.getNumber("GREEN TARGET (R min)", GREEN_TARGET_R_RANGE.minValue);
+  		GREEN_TARGET_R_RANGE.maxValue = (int)SmartDashboard.getNumber("GREEN TARGET (R max)", GREEN_TARGET_R_RANGE.maxValue);
+  		GREEN_TARGET_G_RANGE.minValue = (int)SmartDashboard.getNumber("GREEN TARGET (G min)", GREEN_TARGET_G_RANGE.minValue);
+  		GREEN_TARGET_G_RANGE.maxValue = (int)SmartDashboard.getNumber("GREEN TARGET (G max)", GREEN_TARGET_G_RANGE.maxValue);
+  		GREEN_TARGET_B_RANGE.minValue = (int)SmartDashboard.getNumber("GREEN TARGET (B min)", GREEN_TARGET_B_RANGE.minValue);
+  		GREEN_TARGET_B_RANGE.maxValue = (int)SmartDashboard.getNumber("GREEN TARGET (B max)", GREEN_TARGET_B_RANGE.maxValue);
+  		
+  		
+  		/**
   		RED_TARGET_R_RANGE.minValue = (int)SmartDashboard.getNumber("RED TARGET (R min)", RED_TARGET_R_RANGE.minValue);
   		RED_TARGET_R_RANGE.maxValue = (int)SmartDashboard.getNumber("RED TARGET (R max)", RED_TARGET_R_RANGE.maxValue);
   		RED_TARGET_G_RANGE.minValue = (int)SmartDashboard.getNumber("RED TARGET (G min)", RED_TARGET_G_RANGE.minValue);
@@ -276,6 +318,7 @@ public class TowerCamera extends Subsystem {
   	
   		RED_TEAM = SmartDashboard.getBoolean("RED TEAM", RED_TEAM);
   		BLU_TEAM = SmartDashboard.getBoolean("BLUE TEAM", BLU_TEAM);
+  		**/
   		
   		AREA_MINIMUM = SmartDashboard.getNumber("AREA MIN %", AREA_MINIMUM);
   	}
