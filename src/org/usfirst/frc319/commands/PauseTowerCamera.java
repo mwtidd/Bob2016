@@ -38,7 +38,7 @@ public class PauseTowerCamera extends Command {
 
     // Called just before this Command runs the first time
     protected void initialize() {
-    	Robot.towerCamera.initialize();
+    	//Robot.towerCamera.initialize();
     }
 
     // Called repeatedly when this Command is scheduled to run
